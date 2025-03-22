@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json.schemastore.org/nest-cli",
+  "collection": "@nestjs/schematics",
+  "sourceRoot": "apps/nest-micro/src",
+  "compilerOptions": {
+    "deleteOutDir": true,
+    "webpack": true,
+    "tsConfigPath": "apps/nest-micro/tsconfig.app.json"
+  },
+  "monorepo": true,
+  "root": "apps/nest-micro",
+  "projects": {
+    "nest-micro": {
+      "type": "application",
+      "root": "apps/nest-micro",
+      "entryFile": "main",
+      "sourceRoot": "apps/nest-micro/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/nest-micro/tsconfig.app.json"
+      }
+    },
+    "workflows": {
+      "type": "library",
+      "root": "libs/workflows",
+      "entryFile": "index",
+      "sourceRoot": "libs/workflows/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/workflows/tsconfig.lib.json"
+      }
+    },
+    "workflows-service": {
+      "type": "application",
+      "root": "apps/workflows-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/workflows-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/workflows-service/tsconfig.app.json"
+      }
+    }
+  }
+}

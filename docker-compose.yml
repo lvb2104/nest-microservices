@@ -1,0 +1,64 @@
+services:
+  workflows-service:
+    env_file:
+      - .env
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - APP_NAME=workflows-service
+    command: npm run start:dev -- workflows-service
+    environment:
+      - POSTGRES_HOST=${POSTGRES_HOST_WORKFLOWS}
+      - POSTGRES_PORT=${POSTGRES_PORT}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB_WORKFLOWS}
+    volumes:
+      - ./libs:/usr/src/app/libs
+      - ./package.json:/usr/src/app/package.json
+      - ./tsconfig.json:/usr/src/app/tsconfig.json
+      # Note: This is usually not a good practice to mount node_modules on the host to the container
+      # This instructs Docker Compose to mount the "workflows-service" directory on the host to the "/usr/src/app" directory in the container
+      # This allows us to make changes to the code on the host and have them reflected in the container without rebuilding the image
+      - ./apps/workflows-service:/usr/src/app/apps/workflows-service
+    depends_on: # This instructs Docker Compose to start the "workflows-db" service before starting the "workflows-service" service
+      - workflows-db
+  workflows-db:
+    image: postgres:16.8-alpine3.20
+    environment: # Make sure these environment variables match the ones in the "workflows-service" service
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB_WORKFLOWS}
+  nest-micro:
+    env_file:
+      - .env
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+      args:
+        - APP_NAME=nest-micro
+    command: npm run start:dev -- nest-micro
+    ports:
+      - 3000:3000 # This instructs Docker Compose to map port 3000 on the host to port 3000 in the container
+    environment:
+      - POSTGRES_HOST=${POSTGRES_HOST_NEST_MICRO}
+      - POSTGRES_PORT=${POSTGRES_PORT}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB_NEST_MICRO}
+    volumes:
+      - ./libs:/usr/src/app/libs
+      - ./package.json:/usr/src/app/package.json
+      - ./tsconfig.json:/usr/src/app/tsconfig.json
+      # Note: This is usually not a good practice to mount node_modules on the host to the container
+      - ./apps/nest-micro:/usr/src/app/apps/nest-micro
+    depends_on:
+      - nest-micro-db
+      - workflows-service
+  nest-micro-db:
+    image: postgres:16.8-alpine3.20
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB_NEST_MICRO}
