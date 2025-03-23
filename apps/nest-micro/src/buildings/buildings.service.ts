@@ -1,16 +1,23 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { CreateBuildingDto } from './dto/create-building.dto';
 import { UpdateBuildingDto } from './dto/update-building.dto';
 import { Building } from './entities/building.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Workflow } from '../../../workflows-service/src/workflows/entities/workflow.entity';
+import { ClientProxy } from '@nestjs/microservices';
+import { WORKFLOWS_SERVICE } from '../constants';
+import { CreateWorkflowDto } from '../../../../libs/workflows/src';
+import { lastValueFrom } from 'rxjs';
 
 @Injectable()
 export class BuildingsService {
   constructor(
     @InjectRepository(Building)
     private readonly buildingRepository: Repository<Building>,
+
+    @Inject(WORKFLOWS_SERVICE)
+    private readonly natsClient: ClientProxy,
   ) {}
   async create(createBuildingDto: CreateBuildingDto): Promise<Building> {
     const building = this.buildingRepository.create(createBuildingDto);
@@ -55,15 +62,11 @@ export class BuildingsService {
   }
 
   async createWorkflow(buildingId: number) {
-    console.log(
-      JSON.stringify({ name: 'My Workflow', buildingId } as CreateBuildingDto),
+    const pattern: string = 'workflows.create';
+    const payload: CreateWorkflowDto = { name: 'New Workflow', buildingId };
+    const newWorkflow = await lastValueFrom(
+      this.natsClient.send<string, CreateWorkflowDto>(pattern, payload),
     );
-    const response = await fetch('http://workflows-service:3001/workflows', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: 'My Workflow', buildingId }),
-    });
-    const newWorkflow = (await response.json()) as Workflow;
     console.log({ newWorkflow });
     return newWorkflow;
   }

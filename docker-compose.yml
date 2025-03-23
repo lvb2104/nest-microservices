@@ -14,6 +14,7 @@ services:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=${POSTGRES_DB_WORKFLOWS}
+      - NATS_URL=${NATS_URL}
     volumes:
       - ./libs:/usr/src/app/libs
       - ./package.json:/usr/src/app/package.json
@@ -24,6 +25,7 @@ services:
       - ./apps/workflows-service:/usr/src/app/apps/workflows-service
     depends_on: # This instructs Docker Compose to start the "workflows-db" service before starting the "workflows-service" service
       - workflows-db
+      - nats
   workflows-db:
     image: postgres:16.8-alpine3.20
     environment: # Make sure these environment variables match the ones in the "workflows-service" service
@@ -47,6 +49,7 @@ services:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=${POSTGRES_DB_NEST_MICRO}
+      - NATS_URL=${NATS_URL}
     volumes:
       - ./libs:/usr/src/app/libs
       - ./package.json:/usr/src/app/package.json
@@ -56,9 +59,13 @@ services:
     depends_on:
       - nest-micro-db
       - workflows-service
+      - nats
   nest-micro-db:
     image: postgres:16.8-alpine3.20
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=${POSTGRES_DB_NEST_MICRO}
+
+  nats:
+    image: nats:alpine3.21
