@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { Workflow } from './entities/workflow.entity';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -9,13 +9,19 @@ import {
 
 @Injectable()
 export class WorkflowsService {
+  private readonly logger = new Logger(WorkflowsService.name);
+
   constructor(
     @InjectRepository(Workflow)
     private readonly buildingRepository: Repository<Workflow>,
   ) {}
   async create(createWorkflowDto: CreateWorkflowDto): Promise<Workflow> {
     const workflow = this.buildingRepository.create(createWorkflowDto);
-    return this.buildingRepository.save(workflow);
+    const newWorkflow = await this.buildingRepository.save(workflow);
+    this.logger.log(
+      `Created workflow with id ${newWorkflow.id} for the building ${newWorkflow.buildingId}`,
+    );
+    return newWorkflow;
   }
 
   async findAll(): Promise<Workflow[]> {
