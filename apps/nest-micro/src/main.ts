@@ -7,7 +7,12 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe());
   await app.listen(process.env.PORT ?? 3000);
 }
-bootstrap().catch((error) => {
-  console.log('Error starting the application:', error);
-  process.exit(1);
-});
+bootstrap()
+  .then(() => {
+    console.log(
+      `Nest microservice is running on port ${process.env.PORT ?? 3000}`,
+    );
+  })
+  .catch((err) => {
+    console.error('Error starting the application:', err);
+  });

@@ -1,18 +1,17 @@
 import { NestFactory } from '@nestjs/core';
-import { WorkflowsServiceModule } from './workflows-service.module';
-import { MicroserviceOptions, Transport } from '@nestjs/microservices';
+import { AlarmsClassifierServiceModule } from './alarms-classifier-service.module';
 import { ValidationPipe } from '@nestjs/common';
+import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 
 async function bootstrap() {
-  const app = await NestFactory.create(WorkflowsServiceModule);
+  const app = await NestFactory.create(AlarmsClassifierServiceModule);
   app.useGlobalPipes(new ValidationPipe());
-
   app.connectMicroservice<MicroserviceOptions>(
     {
       transport: Transport.NATS,
       options: {
         servers: process.env.NATS_URL,
-        queue: 'workflows-service',
+        queue: 'alarms-classifier-service',
       },
     },
     {
@@ -20,14 +19,15 @@ async function bootstrap() {
     },
   );
   await app.startAllMicroservices();
-  await app.listen(process.env.PORT ?? 3000);
+  await app.listen(process.env.port ?? 3000);
 }
 bootstrap()
   .then(() => {
     console.log(
-      `Workflows service is running on port ${process.env.PORT ?? 3000}`,
+      `Alarms Classifier Service is running on: ${process.env.port ?? 3000}`,
     );
   })
   .catch((err) => {
-    console.error('Error starting the application:', err);
+    console.error('Error starting Alarms Classifier Service:', err);
+    process.exit(1);
   });

@@ -1,18 +1,17 @@
 import { NestFactory } from '@nestjs/core';
-import { WorkflowsServiceModule } from './workflows-service.module';
-import { MicroserviceOptions, Transport } from '@nestjs/microservices';
+import { NotificationsServiceModule } from './notifications-service.module';
 import { ValidationPipe } from '@nestjs/common';
+import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 
 async function bootstrap() {
-  const app = await NestFactory.create(WorkflowsServiceModule);
+  const app = await NestFactory.create(NotificationsServiceModule);
   app.useGlobalPipes(new ValidationPipe());
-
   app.connectMicroservice<MicroserviceOptions>(
     {
       transport: Transport.NATS,
       options: {
         servers: process.env.NATS_URL,
-        queue: 'workflows-service',
+        queue: 'notifications-service',
       },
     },
     {
@@ -20,12 +19,12 @@ async function bootstrap() {
     },
   );
   await app.startAllMicroservices();
-  await app.listen(process.env.PORT ?? 3000);
+  await app.listen(process.env.port ?? 3000);
 }
 bootstrap()
   .then(() => {
     console.log(
-      `Workflows service is running on port ${process.env.PORT ?? 3000}`,
+      `Notifications service is running on port ${process.env.port ?? 3000}`,
     );
   })
   .catch((err) => {

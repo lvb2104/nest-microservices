@@ -10,6 +10,15 @@
   "monorepo": true,
   "root": "apps/nest-micro",
   "projects": {
+    "alarms-classifier-service": {
+      "type": "application",
+      "root": "apps/alarms-classifier-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/alarms-classifier-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/alarms-classifier-service/tsconfig.app.json"
+      }
+    },
     "alarms-generator": {
       "type": "application",
       "root": "apps/alarms-generator",
@@ -35,6 +44,15 @@
       "sourceRoot": "apps/nest-micro/src",
       "compilerOptions": {
         "tsConfigPath": "apps/nest-micro/tsconfig.app.json"
+      }
+    },
+    "notifications-service": {
+      "type": "application",
+      "root": "apps/notifications-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/notifications-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/notifications-service/tsconfig.app.json"
       }
     },
     "workflows": {

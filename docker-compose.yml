@@ -108,3 +108,41 @@ services:
       - ./apps/alarms-generator:/usr/src/app/apps/alarms-generator
     depends_on:
       - nats
+  alarms-classifier-service:
+    env_file:
+      - .env
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+      args:
+        - APP_NAME=alarms-classifier-service
+    command: npm run start:dev -- alarms-classifier-service
+    environment:
+      - NATS_URL=${NATS_URL}
+    volumes:
+      - ./libs:/usr/src/app/libs
+      - ./package.json:/usr/src/app/package.json
+      - ./tsconfig.json:/usr/src/app/tsconfig.json
+      # Note: This is usually not a good practice to mount node_modules on the host to the container
+      - ./apps/alarms-classifier-service:/usr/src/app/apps/alarms-classifier-service
+    depends_on:
+      - nats
+  notifications-service:
+    env_file:
+      - .env
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+      args:
+        - APP_NAME=notifications-service
+    command: npm run start:dev -- notifications-service
+    environment:
+      - NATS_URL=${NATS_URL}
+    volumes:
+      - ./libs:/usr/src/app/libs
+      - ./package.json:/usr/src/app/package.json
+      - ./tsconfig.json:/usr/src/app/tsconfig.json
+      # Note: This is usually not a good practice to mount node_modules on the host to the container
+      - ./apps/notifications-service:/usr/src/app/apps/notifications-service
+    depends_on:
+      - nats
