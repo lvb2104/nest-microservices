@@ -62,10 +62,13 @@ export class BuildingsService {
   }
 
   async createWorkflow(buildingId: number) {
-    const pattern: string = 'workflows.create';
+    const pattern: { cmd: string } = { cmd: 'workflows.create' };
     const payload: CreateWorkflowDto = { name: 'New Workflow', buildingId };
     const newWorkflow = await lastValueFrom(
-      this.natsClient.send<string, CreateWorkflowDto>(pattern, payload),
+      this.natsClient.send<{ cmd: string }, CreateWorkflowDto>(
+        pattern,
+        payload,
+      ),
     );
     console.log({ newWorkflow });
     return newWorkflow;

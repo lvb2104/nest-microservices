@@ -10,7 +10,7 @@ import { MessagePattern, Payload } from '@nestjs/microservices';
 export class WorkflowsController {
   constructor(private readonly workflowsService: WorkflowsService) {}
 
-  @MessagePattern('workflows.create')
+  @MessagePattern({ cmd: 'workflows.create' })
   create(
     @Payload() createWorkflowDto: CreateWorkflowDto,
     // @Ctx() context: NatsContext,

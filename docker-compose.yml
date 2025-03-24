@@ -4,7 +4,7 @@ services:
       - .env
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: ./Dockerfile
       args:
         - APP_NAME=workflows-service
     command: npm run start:dev -- workflows-service
@@ -68,6 +68,43 @@ services:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=${POSTGRES_DB_NEST_MICRO}
-
   nats:
     image: nats:alpine3.21
+  alarms-service:
+    env_file:
+      - .env
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+      args:
+        - APP_NAME=alarms-service
+    command: npm run start:dev -- alarms-service
+    environment:
+      - NATS_URL=${NATS_URL}
+    volumes:
+      - ./libs:/usr/src/app/libs
+      - ./package.json:/usr/src/app/package.json
+      - ./tsconfig.json:/usr/src/app/tsconfig.json
+      # Note: This is usually not a good practice to mount node_modules on the host to the container
+      - ./apps/alarms-service:/usr/src/app/apps/alarms-service
+    depends_on:
+      - nats
+  alarms-generator:
+    env_file:
+      - .env
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+      args:
+        - APP_NAME=alarms-generator
+    command: npm run start:dev -- alarms-generator
+    environment:
+      - NATS_URL=${NATS_URL}
+    volumes:
+      - ./libs:/usr/src/app/libs
+      - ./package.json:/usr/src/app/package.json
+      - ./tsconfig.json:/usr/src/app/tsconfig.json
+      # Note: This is usually not a good practice to mount node_modules on the host to the container
+      - ./apps/alarms-generator:/usr/src/app/apps/alarms-generator
+    depends_on:
+      - nats
