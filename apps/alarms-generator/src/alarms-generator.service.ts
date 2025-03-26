@@ -9,7 +9,7 @@ export class AlarmsGeneratorService {
   constructor(
     @Inject(ALARM_SERVICE) private readonly alarmsClient: ClientProxy,
   ) {}
-  @Interval(10000)
+  // @Interval(10000)
   generateAlarms() {
     const alarmEvent = {
       name: `Alarm #` + Math.floor(Math.random() * 1000) + 1,

@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-This project demonstrates a microservices architecture using NestJS framework. It consists of multiple services that communicate with each other using NATS as a message broker. Each service has its own PostgreSQL database and can be run independently using Docker.
+This project demonstrates a microservices architecture using NestJS framework. It consists of multiple services that communicate with each other using both NATS and RabbitMQ as message brokers. Each service has its own PostgreSQL database and can be run independently using Docker.
 
 > **Note:** This project is currently under development and not all features are complete.
 
@@ -16,14 +16,14 @@ The project follows a microservices architecture with the following components:
 - **alarms-service**: Service that processes and manages alarms received from the alarms-generator
 - **alarms-classifier-service**: Service that classifies alarms based on their characteristics
 - **notifications-service**: Service that handles sending notifications through various channels
-- **NATS**: Message broker for service-to-service communication
+- **NATS & RabbitMQ**: Message brokers for service-to-service communication
 - **PostgreSQL**: Separate database instances for each service
 
 ### Communication Flow
 
 ```mermaid
 graph LR
-    A[nest-micro] -->|NATS| B[workflows-service]
+    A[nest-micro] -->|RabbitMQ| B[workflows-service]
     C[alarms-generator] -->|NATS Events| D[alarms-service]
     D -->|NATS Request-Reply| E[alarms-classifier-service]
     D -->|NATS Events| F[notifications-service]
@@ -63,32 +63,21 @@ nest-micro/
 └── .env                       # Environment variables
 ```
 
+## Messaging Infrastructure
+
+This project utilizes both NATS and RabbitMQ as message brokers for communication between microservices. Different services may use either NATS or RabbitMQ depending on their specific requirements and when they were developed.
+
 ## NATS Messaging Patterns
 
-This project utilizes NATS as the message broker for communication between microservices. NATS supports different messaging patterns, and this project specifically implements:
+NATS supports different messaging patterns, and this project specifically implements:
 
 ### Queue Groups (Load Balancing)
 
-The workflow-service is configured to use NATS queue groups, which ensures that:
+Some services are configured to use NATS queue groups, which ensures that:
 
-- Multiple instances of the service can run concurrently (currently set to 3 replicas)
+- Multiple instances of the service can run concurrently
 - Each message is processed by only one service instance
 - Automatic load balancing occurs across service instances
-
-```typescript
-// In workflows-service/main.ts
-app.connectMicroservice<MicroserviceOptions>({
-  transport: Transport.NATS,
-  options: {
-    servers: process.env.NATS_URL,
-    queue: 'workflows-service', // Queue group name
-  },
-});
-```
-
-This configuration ensures that when the main service sends a message to create a workflow, only one of the three workflows-service instances will process it, preventing duplicate workflow creation.
-
-Similarly, the alarms-service uses a queue group to ensure alarms are processed reliably:
 
 ```typescript
 // In alarms-service/main.ts
@@ -101,35 +90,79 @@ app.connectMicroservice<MicroserviceOptions>({
 });
 ```
 
-### Request-Reply Pattern
+### Request-Reply Pattern with NATS
 
-The project uses the request-reply pattern for communication between services:
-
-- The main service (`nest-micro`) sends requests to the workflows service
-- The workflow service processes the request and sends a reply
+Some services use the request-reply pattern for communication:
 
 ```typescript
-// In nest-micro/buildings.service.ts
-const pattern: string = 'workflows.create';
-const payload: CreateWorkflowDto = { name: 'New Workflow', buildingId };
-const newWorkflow = await lastValueFrom(
-  this.natsClient.send<string, CreateWorkflowDto>(pattern, payload),
+// Example from alarm-service to alarms-classifier-service
+const pattern = { cmd: 'alarm.classify' };
+const payload = { alarmId: 123, data: '...' };
+const classification = await lastValueFrom(
+  this.natsClient.send(pattern, payload),
 );
 ```
 
-### Event-based Pattern (Publish/Subscribe)
+### Event-based Pattern (Publish/Subscribe) with NATS
 
 The alarms system uses an event-based approach where:
 
-- The alarms-generator service publishes events but doesn't wait for responses
-- The alarms-service subscribes to these events and processes them asynchronously
+- Services publish events but don't wait for responses
+- Other services subscribe to these events and process them asynchronously
 
 ```typescript
 // In alarms-generator/alarms-generator.service.ts
 this.alarmsClient.emit('alarm.created', alarmEvent);
 ```
 
-This pattern allows for decoupled communication where the publisher doesn't need to know which services (or how many) are processing the event, making the system more scalable and resilient.
+## RabbitMQ Messaging
+
+The system has been partially migrated to use RabbitMQ for certain service communications, particularly for the workflow subsystem.
+
+### RabbitMQ Connection Configuration
+
+Services using RabbitMQ connect with the following configuration:
+
+```typescript
+// Example from workflows-service/main.ts
+app.connectMicroservice<MicroserviceOptions>({
+  transport: Transport.RMQ,
+  options: {
+    urls: [process.env.RABBITMQ_URL || 'amqp://rabbitmq:5672'],
+    queue: 'workflows-service',
+  },
+});
+```
+
+### Queue-based Load Balancing in RabbitMQ
+
+RabbitMQ provides robust queue-based message distribution that ensures:
+
+- Messages are persisted until successfully processed
+- Multiple worker instances can consume from the same queue
+- Each message is delivered to exactly one consumer
+
+### RabbitMQ vs NATS
+
+Our system leverages the strengths of both message brokers:
+
+| Feature | RabbitMQ | NATS |
+|---------|----------|------|
+| Message Persistence | Strong persistence with durable exchanges and queues | Lighter persistence with streaming option |
+| Routing Capabilities | Complex routing with exchanges, bindings, and routing keys | Simple subject-based routing |
+| Performance | Good performance with optimization for reliability | Extremely high throughput, designed for speed |
+| Protocol | AMQP | Custom binary protocol |
+| Delivery Guarantees | At-least-once, at-most-once, exactly-once | At-most-once, at-least-once with streaming |
+
+### RabbitMQ Benefits
+
+RabbitMQ provides several advantages for specific parts of our architecture:
+
+- **Reliability**: Persistent message queues ensure messages aren't lost during service outages
+- **Flexible Routing**: Supports direct, topic, and fanout exchanges for sophisticated message routing
+- **Back-pressure Handling**: Naturally handles traffic spikes by queuing messages when services are busy
+- **Message TTL**: Supports time-to-live for messages to prevent queue buildups
+- **Dead Letter Exchanges**: Messages that can't be processed can be redirected for special handling
 
 ## Orchestration Approach
 
@@ -163,7 +196,7 @@ classifyAlarm(@Payload() data: unknown) {
 This service is designed to run complex classification algorithms in a production environment:
 
 - It provides a dedicated microservice for computationally intensive classification logic
-- It supports scalability by allowing multiple instances behind a NATS queue group
+- It supports scalability by allowing multiple instances behind a message queue
 - The classification logic is isolated, enabling independent updates and improvements
 
 ### Notifications Service
@@ -191,3 +224,4 @@ Key features of the notifications orchestration:
 3. **Resilience**: The distributed nature of the system ensures that failures in one service don't bring down the entire system
 4. **Flexibility**: New services can be added to the processing pipeline without modifying existing ones
 5. **Maintainability**: Services can be developed, deployed, and maintained by different teams
+6. **Messaging Flexibility**: The ability to choose the most appropriate message broker for each service interaction

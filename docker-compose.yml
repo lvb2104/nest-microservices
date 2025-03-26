@@ -14,7 +14,8 @@ services:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=${POSTGRES_DB_WORKFLOWS}
-      - NATS_URL=${NATS_URL}
+      # - NATS_URL=${NATS_URL}
+      - RABBITMQ_URL=${RABBITMQ_URL}
     deploy:
       replicas: 3 # This instructs Docker Compose to run 3 replicas of the "workflows-service" service
     volumes:
@@ -27,7 +28,8 @@ services:
       - ./apps/workflows-service:/usr/src/app/apps/workflows-service
     depends_on: # This instructs Docker Compose to start the "workflows-db" service before starting the "workflows-service" service
       - workflows-db
-      - nats
+      # - nats
+      - rabbitmq
   workflows-db:
     image: postgres:16.8-alpine3.20
     environment: # Make sure these environment variables match the ones in the "workflows-service" service
@@ -51,7 +53,8 @@ services:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=${POSTGRES_DB_NEST_MICRO}
-      - NATS_URL=${NATS_URL}
+      # - NATS_URL=${NATS_URL}
+      - RABBITMQ_URL=${RABBITMQ_URL}
     volumes:
       - ./libs:/usr/src/app/libs
       - ./package.json:/usr/src/app/package.json
@@ -61,7 +64,8 @@ services:
     depends_on:
       - nest-micro-db
       - workflows-service
-      - nats
+      # - nats
+      - rabbitmq
   nest-micro-db:
     image: postgres:16.8-alpine3.20
     environment:
@@ -146,3 +150,5 @@ services:
       - ./apps/notifications-service:/usr/src/app/apps/notifications-service
     depends_on:
       - nats
+  rabbitmq:
+    image: rabbitmq:4.0.7-management-alpine
