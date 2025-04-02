@@ -85,6 +85,7 @@ services:
     command: npm run start:dev -- alarms-service
     environment:
       - NATS_URL=${NATS_URL}
+      - RABBITMQ_URL=${RABBITMQ_URL}
     volumes:
       - ./libs:/usr/src/app/libs
       - ./package.json:/usr/src/app/package.json
@@ -93,6 +94,7 @@ services:
       - ./apps/alarms-service:/usr/src/app/apps/alarms-service
     depends_on:
       - nats
+      - rabbitmq
   alarms-generator:
     env_file:
       - .env
@@ -141,7 +143,8 @@ services:
         - APP_NAME=notifications-service
     command: npm run start:dev -- notifications-service
     environment:
-      - NATS_URL=${NATS_URL}
+      # - NATS_URL=${NATS_URL}
+      - RABBITMQ_URL=${RABBITMQ_URL}
     volumes:
       - ./libs:/usr/src/app/libs
       - ./package.json:/usr/src/app/package.json
@@ -149,6 +152,7 @@ services:
       # Note: This is usually not a good practice to mount node_modules on the host to the container
       - ./apps/notifications-service:/usr/src/app/apps/notifications-service
     depends_on:
-      - nats
+      # - nats
+      - rabbitmq
   rabbitmq:
     image: rabbitmq:4.0.7-management-alpine
