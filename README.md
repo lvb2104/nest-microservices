@@ -225,3 +225,85 @@ Key features of the notifications orchestration:
 4. **Flexibility**: New services can be added to the processing pipeline without modifying existing ones
 5. **Maintainability**: Services can be developed, deployed, and maintained by different teams
 6. **Messaging Flexibility**: The ability to choose the most appropriate message broker for each service interaction
+
+## Outbox pattern
+
+The Outbox pattern is a reliable messaging pattern that ensures consistency between database transactions and message publishing in distributed systems.
+
+### How it Works
+
+1. Instead of sending messages to the message broker directly, we first insert the new message into a database table called OUTBOX
+2. This insertion is part of the same database transaction as the business operation
+3. A separate process called the OUTBOX processor periodically checks for unsent messages and publishes them to the message broker
+4. After successful publishing, the message is either deleted from the OUTBOX table or marked as processed
+
+### Implementation in Our Architecture
+
+Our implementation includes:
+
+```typescript
+// In BuildingsService when creating a new building
+async create(createBuildingDto: CreateBuildingDto): Promise<Building> {
+  const queryRunner = this.dataSource.createQueryRunner();
+  await queryRunner.connect();
+  await queryRunner.startTransaction();
+  try {
+    // Create the building entity
+    const building = buildingRepository.create(createBuildingDto);
+    const newBuilding = await buildingRepository.save(building);
+
+    // Insert message to outbox table in the same transaction
+    await outboxRepository.save({
+      type: 'workflows.create',
+      payload: { name: 'my-workflow', buildingId: building.id },
+      target: WORKFLOWS_SERVICE.description,
+    });
+
+    await queryRunner.commitTransaction();
+    return newBuilding;
+  } catch (error) {
+    await queryRunner.rollbackTransaction();
+    throw error;
+  }
+}
+```
+
+### Message Processing
+
+The OutboxProcessor handles the reliable delivery of messages:
+
+```typescript
+@Cron(CronExpression.EVERY_10_SECONDS)
+async processOutboxMessages() {
+  const messages = await this.outboxService.getUnprocessedMessages({
+    target: WORKFLOWS_SERVICE.description,
+    take: 100,
+  });
+  
+  await Promise.all(
+    messages.map(async (outbox) => {
+      await this.dispatchWorkflowEvent(outbox);
+      await this.outboxRepository.delete(outbox.id);
+    }),
+  );
+}
+```
+
+### Benefits of the Outbox Pattern
+
+1. **Atomicity**: Ensures that both the database operation and message publication either succeed or fail together
+2. **Reliability**: Messages are never lost, even if the message broker is temporarily unavailable
+3. **Consistency**: Guarantees that every business event results in exactly one message being sent
+4. **Resilience**: System can continue to accept operations even when the message broker is down
+5. **Idempotency**: Supports idempotent message processing by assigning unique IDs to messages
+
+### Use Cases in Our System
+
+The Outbox pattern is particularly useful in our architecture for:
+
+- Creating workflows when a new building is created
+- Ensuring cross-service data consistency without two-phase commits
+- Providing at-least-once delivery guarantees for critical business events
+- Preventing message loss during service restarts or network issues
+
+By combining the Outbox pattern with RabbitMQ's reliable messaging features, we achieve a highly dependable messaging infrastructure that can recover from failures and maintain data consistency across our distributed microservices.

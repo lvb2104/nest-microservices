@@ -4,13 +4,13 @@ import {
   CreateWorkflowDto,
   UpdateWorkflowDto,
 } from '../../../../libs/workflows/src';
-import { MessagePattern, Payload } from '@nestjs/microservices';
+import { EventPattern, Payload } from '@nestjs/microservices';
 
 @Controller('workflows')
 export class WorkflowsController {
   constructor(private readonly workflowsService: WorkflowsService) {}
 
-  @MessagePattern({ cmd: 'workflows.create' })
+  @EventPattern('workflows.create')
   create(
     @Payload() createWorkflowDto: CreateWorkflowDto,
     // @Ctx() context: NatsContext,

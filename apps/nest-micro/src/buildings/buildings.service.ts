@@ -1,14 +1,14 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { CreateBuildingDto } from './dto/create-building.dto';
-import { UpdateBuildingDto } from './dto/update-building.dto';
 import { Building } from './entities/building.entity';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Workflow } from '../../../workflows-service/src/workflows/entities/workflow.entity';
+import { DataSource, Repository } from 'typeorm';
 import { ClientProxy } from '@nestjs/microservices';
 import { WORKFLOWS_SERVICE } from '../constants';
-import { CreateWorkflowDto } from '../../../../libs/workflows/src';
 import { lastValueFrom } from 'rxjs';
+import { UpdateBuildingDto } from './dto/update-building.dto';
+import { CreateBuildingDto } from './dto/create-building.dto';
+import { CreateWorkflowDto } from '../../../../libs/workflows/src';
+import { Outbox } from '../../../../libs/outbox/src';
 
 @Injectable()
 export class BuildingsService {
@@ -18,12 +18,37 @@ export class BuildingsService {
 
     @Inject(WORKFLOWS_SERVICE)
     private readonly natsClient: ClientProxy,
+
+    private readonly dataSource: DataSource,
   ) {}
   async create(createBuildingDto: CreateBuildingDto): Promise<Building> {
-    const building = this.buildingRepository.create(createBuildingDto);
-    const newBuilding = await this.buildingRepository.save(building);
-    await this.createWorkflow(newBuilding.id);
-    return newBuilding;
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+    const buildingRepository = queryRunner.manager.getRepository(Building);
+    const outboxRepository = queryRunner.manager.getRepository(Outbox);
+    try {
+      const building = buildingRepository.create(createBuildingDto);
+      const newBuilding = await buildingRepository.save(building);
+
+      // insert new outbox to outbox table instead of sending the message directly to the queue of the workflows service
+      await outboxRepository.save({
+        type: 'workflows.create',
+        payload: {
+          name: 'my-workflow',
+          buildingId: building.id,
+        },
+        target: WORKFLOWS_SERVICE.description,
+      });
+
+      await queryRunner.commitTransaction();
+      return newBuilding;
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
   }
 
   async findAll(): Promise<Building[]> {

@@ -18,11 +18,17 @@
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false,
     "paths": {
+      "@app/outbox": [
+        "libs/outbox/src"
+      ],
+      "@app/outbox/*": [
+        "libs/outbox/src/*"
+      ],
       "@app/workflows": [
-        "libs/workflows/src"
+        "apps/libs/workflows/src"
       ],
       "@app/workflows/*": [
-        "libs/workflows/src/*"
+        "apps/libs/workflows/src/*"
       ]
     }
   }

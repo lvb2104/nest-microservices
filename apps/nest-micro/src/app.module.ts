@@ -4,10 +4,13 @@ import { AppService } from './app.service';
 import { BuildingsModule } from './buildings/buildings.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { HealthModule } from './health/health.module';
+import { ScheduleModule } from '@nestjs/schedule';
+import { OutboxModule, OutboxService } from '../../../libs/outbox/src';
 
 @Module({
   imports: [
     BuildingsModule,
+    ScheduleModule.forRoot(),
     TypeOrmModule.forRoot({
       type: 'postgres',
       host: process.env.POSTGRES_HOST_NEST_MICRO,
@@ -19,6 +22,7 @@ import { HealthModule } from './health/health.module';
       synchronize: true,
     }),
     HealthModule,
+    OutboxModule,
   ],
   controllers: [AppController],
   providers: [AppService],
