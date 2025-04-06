@@ -37,6 +37,15 @@
         "tsConfigPath": "apps/alarms-service/tsconfig.app.json"
       }
     },
+    "inbox": {
+      "type": "library",
+      "root": "libs/inbox",
+      "entryFile": "index",
+      "sourceRoot": "libs/inbox/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/inbox/tsconfig.lib.json"
+      }
+    },
     "nest-micro": {
       "type": "application",
       "root": "apps/nest-micro",

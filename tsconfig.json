@@ -18,6 +18,12 @@
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false,
     "paths": {
+      "@app/inbox": [
+        "libs/inbox/src"
+      ],
+      "@app/inbox/*": [
+        "libs/inbox/src/*"
+      ],
       "@app/outbox": [
         "libs/outbox/src"
       ],
